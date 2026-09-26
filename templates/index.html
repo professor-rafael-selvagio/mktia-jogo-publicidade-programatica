@@ -1,3 +1,181 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Publicidade em jogo</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head>
-<body class="landing"><main class="landing-card"><span class="eyebrow">MARKETING DIGITAL</span><h1>Publicidade em jogo</h1><p>Descubra como diferenciar publicidade tradicional e programática.</p><div class="role-links"><a class="button primary" href="/professor">Sou Professor</a><a class="button secondary" href="/aluno">Sou Aluno</a></div></main></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Publicidade em Jogo | Marketing Digital com Inteligência Artificial</title>
+  <meta name="description" content="Plataforma educacional para explorar as diferenças entre publicidade tradicional e programática.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a1a;
+      --card-bg: #ffffff;
+      --border: rgba(0,0,0,0.1);
+      --muted: #555;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --text: #f2f2f2;
+      --card-bg: #1e1e1e;
+      --border: rgba(255,255,255,0.12);
+      --muted: #bbb;
+    }
+    body.landing {
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+    .landing-card { background: var(--card-bg); }
+
+    .top-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 16px;
+    }
+    .icon-button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .icon-button:hover { opacity: 0.8; }
+
+    .module-tag {
+      display: inline-block;
+      margin: 8px 0 4px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    .landing-footer {
+      margin-top: 24px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .landing-footer a { color: inherit; text-decoration: underline; }
+    .landing-links { margin-top: 4px; }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--text);
+      color: var(--bg);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body class="landing">
+
+  <div class="top-bar">
+    <button class="icon-button" id="shareBtn" type="button" aria-label="Compartilhar">🔗 Compartilhar</button>
+    <button class="icon-button" id="themeToggle" type="button" aria-label="Alternar tema">🌙 Tema</button>
+  </div>
+
+  <main class="landing-card">
+    <span class="eyebrow">MARKETING DIGITAL COM INTELIGÊNCIA ARTIFICIAL</span>
+    <span class="module-tag">Módulo 3 · Publicidade Programática · Atividade</span>
+    <h1>Publicidade em Jogo</h1>
+    <p>Uma experiência interativa para compreender, na prática, as diferenças entre a publicidade tradicional e a publicidade programática.</p>
+
+    <div class="role-links">
+      <a class="button primary" href="/professor">Sou Professor</a>
+      <a class="button secondary" href="/aluno">Sou Aluno</a>
+    </div>
+
+    <footer class="landing-footer">
+      <p>Desenvolvido por <strong>Prof. Esp. Rafael Selvagio</strong> — Curso de Marketing Digital com Inteligência Artificial</p>
+      <p class="landing-links">
+        <a href="https://github.com/professor-rafael-selvagio" target="_blank" rel="noopener">GitHub</a>
+        ·
+        <a href="https://professor-rafael-selvagio.github.io/contato/" target="_blank" rel="noopener">Contato</a>
+      </p>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast">Link copiado!</div>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const themeBtn = document.getElementById('themeToggle');
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const initial = stored || (prefersDark ? 'dark' : 'light');
+      root.setAttribute('data-theme', initial);
+      updateThemeLabel(initial);
+
+      themeBtn.addEventListener('click', function () {
+        const current = root.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateThemeLabel(next);
+      });
+
+      function updateThemeLabel(theme) {
+        themeBtn.textContent = theme === 'dark' ? '☀️ Tema' : '🌙 Tema';
+      }
+    })();
+
+    (function () {
+      const shareBtn = document.getElementById('shareBtn');
+      const toast = document.getElementById('toast');
+
+      shareBtn.addEventListener('click', async function () {
+        const shareData = {
+          title: 'Publicidade em Jogo',
+          text: 'Atividade do Módulo 3 - Publicidade Programática',
+          url: window.location.href
+        };
+
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+          } catch (e) {
+            /* usuário cancelou o compartilhamento */
+          }
+        } else {
+          try {
+            await navigator.clipboard.writeText(window.location.href);
+            showToast();
+          } catch (e) {
+            showToast('Não foi possível copiar o link');
+          }
+        }
+      });
+
+      function showToast(msg) {
+        if (msg) toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+      }
+    })();
+  </script>
+</body>
+</html>
