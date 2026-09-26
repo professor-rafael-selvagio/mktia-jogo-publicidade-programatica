@@ -1,6 +1,6 @@
 # Publicidade em jogo
 
-Atividade em tempo real para diferenciar publicidade tradicional e programática, construída com Flask e Socket.IO.
+Atividade em tempo real para diferenciar publicidade tradicional e programática, construída com Flask e Socket.IO. As perguntas ficam em `perguntas.csv`, permitindo editar o conteúdo sem alterar o código. Ao criar a sala, o professor escolhe quantas perguntas da sequência serão usadas; ao fim, o painel exibe um relatório agregado de respostas e acertos por cenário.
 
 ## Executar localmente
 
