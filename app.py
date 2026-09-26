@@ -192,6 +192,9 @@ def student_join(data):
     if not room:
         emit("error_message", {"message": "Sala inexistente. Confira o código."})
         return
+    if room["state"] == "ended":
+        emit("error_message", {"message": "Esta sessão foi encerrada pelo professor."})
+        return
     if not (2 <= len(name) <= 40):
         emit("error_message", {"message": "Informe um nome entre 2 e 40 caracteres."})
         return
@@ -242,6 +245,13 @@ def teacher_action(data):
     if not room:
         emit("error_message", {"message": "Ação não autorizada."}); return
     action = data.get("action")
+    if action == "end":
+        room["state"] = "ended"
+        broadcast(room)
+        emit("session_ended")
+        leave_room(room["code"])
+        room["teacher_sid"] = None
+        return
     if action == "start" and room["state"] in ("waiting", "closed"):
         room["state"] = "open"
     elif action == "close" and room["state"] == "open":

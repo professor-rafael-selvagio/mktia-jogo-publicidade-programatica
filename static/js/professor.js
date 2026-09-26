@@ -32,7 +32,8 @@ function renderReport(report, students) {
 }
 $('activity-type').onchange = populateCounts; populateCounts();
 $('create-room').onclick = () => socket.emit('create_room', {activity_type: $('activity-type').value, question_count: $('question-count').value});
-$('teacher-back').onclick = () => { socket.emit('teacher_leave'); activeCode = null; sessionStorage.removeItem('teacherRoom'); $('room-view').hidden = true; $('create-view').hidden = false; };
-document.querySelectorAll('[data-action]').forEach(button => button.onclick = () => socket.emit('teacher_action', {action: button.dataset.action}));
+function returnToCreate() { activeCode = null; sessionStorage.removeItem('teacherRoom'); $('room-view').hidden = true; $('create-view').hidden = false; }
+$('teacher-back').onclick = () => { socket.emit('teacher_leave'); returnToCreate(); };
+document.querySelectorAll('[data-action]').forEach(button => button.onclick = () => { if (button.dataset.action !== 'end' || window.confirm('Encerrar esta sessão? Os alunos não poderão mais entrar ou responder.')) socket.emit('teacher_action', {action: button.dataset.action}); });
 socket.on('connect', () => { setConnection(true); if (activeCode) socket.emit('teacher_join', {code: activeCode}); }); socket.on('disconnect', () => setConnection(false));
-socket.on('room_created', ({code}) => { activeCode = code; sessionStorage.setItem('teacherRoom', code); socket.emit('teacher_join', {code}); }); socket.on('teacher_state', render); socket.on('error_message', ({message}) => toast(message));
+socket.on('room_created', ({code}) => { activeCode = code; sessionStorage.setItem('teacherRoom', code); socket.emit('teacher_join', {code}); }); socket.on('session_ended', returnToCreate); socket.on('teacher_state', render); socket.on('error_message', ({message}) => toast(message));
