@@ -1,6 +1,6 @@
 # Publicidade em jogo
 
-Atividade em tempo real para diferenciar publicidade tradicional e programática, construída com Flask e Socket.IO. As perguntas ficam em `perguntas.csv`, permitindo editar o conteúdo sem alterar o código. Ao criar a sala, o professor escolhe quantas perguntas da sequência serão usadas; ao fim, o painel exibe um relatório agregado de respostas e acertos por cenário.
+Atividade em tempo real construída com Flask e Socket.IO, com dois blocos didáticos: **Publicidade Programática** e **Leilão de Anúncios e RTB**. Os conteúdos ficam em `perguntas.csv` e `leiloes.csv`, permitindo editar os cenários sem alterar o código. Ao criar a sala, o professor seleciona o bloco e a quantidade de perguntas ou rodadas.
 
 ## Executar localmente
 
@@ -11,7 +11,9 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Abra `http://localhost:5000`. Em uma aba, escolha **Sou Professor**, crie a sala e compartilhe o código. Em outra aba (ou outro dispositivo na mesma rede), escolha **Sou Aluno** e entre usando o código. O professor conduz os cinco cenários pelos controles do painel.
+Abra `http://localhost:5000`. Em uma aba, escolha **Sou Professor**, selecione o bloco desejado, crie a sala e compartilhe o código. Em outra aba (ou outro dispositivo na mesma rede), escolha **Sou Aluno** e entre usando o código.
+
+No **Bloco 2 — Leilão de Anúncios e RTB**, os alunos analisam as empresas Nexa, Tuts e Orbe, escolhem A, B ou C e discutem por que o maior lance não determina necessariamente o anúncio vencedor.
 
 ## Publicar no Render
 

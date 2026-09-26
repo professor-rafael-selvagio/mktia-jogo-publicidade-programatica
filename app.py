@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(24))
@@ -14,6 +14,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 MAX_STUDENTS = 80
 QUESTIONS_FILE = Path(__file__).with_name("perguntas.csv")
+AUCTIONS_FILE = Path(__file__).with_name("leiloes.csv")
 
 
 def load_scenarios():
@@ -34,6 +35,36 @@ def load_scenarios():
 
 
 SCENARIOS = load_scenarios()
+
+
+def load_auctions():
+    with AUCTIONS_FILE.open(encoding="utf-8-sig", newline="") as file:
+        rows = list(csv.DictReader(file))
+    required = {"pergunta", "contexto", "empresa_a", "lance_a", "relevancia_a", "qualidade_a",
+                "empresa_b", "lance_b", "relevancia_b", "qualidade_b", "empresa_c",
+                "lance_c", "relevancia_c", "qualidade_c", "correta", "explicacao"}
+    if not rows or not required.issubset(rows[0]):
+        raise RuntimeError("leiloes.csv está vazio ou possui colunas inválidas.")
+    auctions = []
+    for row in rows:
+        correct = row["correta"].strip().upper()
+        if correct not in ("A", "B", "C"):
+            raise RuntimeError("A coluna 'correta' de leiloes.csv deve conter A, B ou C.")
+        companies = []
+        for choice in ("a", "b", "c"):
+            company = row[f"empresa_{choice}"].strip()
+            if company not in ("Nexa", "Tuts", "Orbe"):
+                raise RuntimeError("As empresas de leiloes.csv devem ser Nexa, Tuts ou Orbe.")
+            companies.append({"choice": choice.upper(), "name": company, "bid": row[f"lance_{choice}"].strip(),
+                              "relevance": row[f"relevancia_{choice}"].strip(), "quality": row[f"qualidade_{choice}"].strip()})
+        auctions.append({"question": row["pergunta"].strip(), "context": row["contexto"].strip(),
+                         "options": {company["choice"]: company["name"] for company in companies},
+                         "companies": companies, "correct": correct, "explanation": row["explicacao"].strip(),
+                         "activity_type": "auction"})
+    return auctions
+
+
+AUCTIONS = load_auctions()
 rooms = {}
 
 
@@ -49,9 +80,13 @@ def room_payload(room, include_distribution=False, student_id=None):
     scenario = room["scenarios"][index] if index < len(room["scenarios"]) else None
     data = {"code": room["code"], "state": room["state"], "scenario_index": index,
             "total_scenarios": len(room["scenarios"]), "student_count": sum(1 for s in room["students"].values() if s["sid"]),
-            "response_count": len(room["responses"]), "finished": index >= len(room["scenarios"])}
+            "response_count": len(room["responses"]), "finished": index >= len(room["scenarios"]),
+            "activity_type": room["activity_type"]}
     if scenario:
-        data["scenario"] = {"number": index + 1, "question": scenario["question"], "options": scenario["options"]}
+        data["scenario"] = {"number": index + 1, "question": scenario["question"], "options": scenario["options"],
+                            "activity_type": room["activity_type"]}
+        if room["activity_type"] == "auction":
+            data["scenario"].update({"companies": scenario["companies"], "context": scenario["context"]})
         if room["state"] == "revealed":
             data["scenario"].update({"correct": scenario["correct"], "explanation": scenario["explanation"]})
     if include_distribution and scenario:
@@ -95,7 +130,7 @@ def index():
 
 @app.route("/professor")
 def professor():
-    return render_template("professor.html", question_count=len(SCENARIOS))
+    return render_template("professor.html", activity_counts={"programmatic": len(SCENARIOS), "auction": len(AUCTIONS)})
 
 
 @app.route("/aluno")
@@ -105,17 +140,23 @@ def aluno():
 
 @socketio.on("create_room")
 def create_room(data):
+    activity_type = (data or {}).get("activity_type", "programmatic")
+    available_scenarios = SCENARIOS if activity_type == "programmatic" else AUCTIONS if activity_type == "auction" else None
+    if available_scenarios is None:
+        emit("error_message", {"message": "Escolha uma atividade válida."})
+        return
     try:
-        question_count = int((data or {}).get("question_count", len(SCENARIOS)))
+        question_count = int((data or {}).get("question_count", len(available_scenarios)))
     except (TypeError, ValueError):
         emit("error_message", {"message": "Escolha uma quantidade válida de perguntas."})
         return
-    if not 1 <= question_count <= len(SCENARIOS):
-        emit("error_message", {"message": f"Escolha entre 1 e {len(SCENARIOS)} perguntas."})
+    if not 1 <= question_count <= len(available_scenarios):
+        emit("error_message", {"message": f"Escolha entre 1 e {len(available_scenarios)} rodadas."})
         return
     code = room_code()
     rooms[code] = {"code": code, "teacher_sid": None, "students": {}, "scenario_index": 0,
-                   "state": "waiting", "responses": {}, "scenarios": SCENARIOS[:question_count], "report": [], "scores": {}}
+                   "state": "waiting", "responses": {}, "scenarios": available_scenarios[:question_count], "report": [],
+                   "scores": {}, "activity_type": activity_type}
     emit("room_created", {"code": code})
 
 
@@ -132,6 +173,15 @@ def teacher_join(data):
     join_room(room["code"])
     emit("teacher_state", room_payload(room, True))
     broadcast(room)
+
+
+@socketio.on("teacher_leave")
+def teacher_leave():
+    room = teacher_room(request.sid)
+    if room:
+        leave_room(room["code"])
+        room["teacher_sid"] = None
+        broadcast(room)
 
 
 @socketio.on("student_join")
@@ -156,6 +206,16 @@ def student_join(data):
     emit("student_joined", {"student_id": student_id, "name": name, "state": room_payload(room),
                              "answered": student_id in room["responses"]})
     broadcast(room)
+
+
+@socketio.on("student_leave")
+def student_leave(data):
+    room = get_room((data or {}).get("code"))
+    student_id = (data or {}).get("student_id")
+    if room and student_id in room["students"] and room["students"][student_id]["sid"] == request.sid:
+        leave_room(room["code"])
+        room["students"][student_id]["sid"] = None
+        broadcast(room)
 
 
 @socketio.on("answer")
